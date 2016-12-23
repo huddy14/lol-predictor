@@ -15,6 +15,8 @@ EUROPE_WEST = 'euw'
 KOREA = 'kr'
 RUSSIA = 'ru'
 
+regions = ['br', 'eune', 'na', 'euw', 'kr', 'ru']
+
 #newest api versions as for 22.11.16
 api_version = {
     'current-game' : 1.0,
@@ -22,7 +24,8 @@ api_version = {
     'champion' : 1.2,
     'stats' : 1.3,
     'matchlist' : 2.2,
-    'match' : 2.2
+    'match' : 2.2,
+    'static-data' : 1.2
 }
 
 # platforms ids
@@ -36,13 +39,15 @@ platforms = {
 
 class Player:
 
-    def __init__(self, summoner_id, champion_id, team, winrate = 0, total_games = 0, win = None):
+    def __init__(self, summoner_id=None, champion_id=None, team=None, winrate = 0, total_games = 0, win = None, lane = None, role=None):
         self.summoner_id = summoner_id
         self.champion_id = champion_id
         self.team = team
         self.winrate = winrate
         self.total_games = total_games
         self.win = win
+        self.lane = lane
+        self.role = role
 
 
 
@@ -103,9 +108,10 @@ class RiotService:
         check_response(request)
         return request.json()[summoner_name.replace(" ","").lower()]['id']
 
-    async def get_champion_winrate(self, player):
+    def get_champion_winrate(self, player):
         request = rq.get(
-            'https://{region}.api.pvp.net/api/lol/{region}/v{api_v}/stats/by-summoner/{summ_id}/normal?season=SEASON{year}&api_key={api_key}'.format(
+            'https://{region}.api.pvp.net/api/lol/{region}/v{api_v}/stats/by-summoner/{summ_id}/ranked?season=SEASON{year}&api_key={api_key}'
+            .format(
                 region = self.region,
                 api_v = api_version['stats'],
                 summ_id = player.summoner_id,
@@ -113,15 +119,15 @@ class RiotService:
                 api_key = API_KEY
             )
         )
+        print(request)
         check_response(request)
-        champions =  request.json()['champions']
+        champions = request.json()['champions']
         if champions is not None:
             for champion in champions:
                 if champion['id'] == player.champion_id:
                     print(champion)
-                    player.winrate, player.total_games = self.calculate_winrate(champion)
-                    return
-        return
+                    return self.calculate_winrate(champion)
+        return 0,0
 
     def calculate_winrate(self, champion_info):
         print(champion_info)
@@ -153,7 +159,7 @@ class RiotService:
         check_response(request)
         matches = []
         for match in request.json()['matches']:
-            if match['queue'] == 'RANKED_FLEX_SR' or match['queue'] == 'RANKED_SOLO_5x5':
+            if match['queue'] == 'RANKED_SOLO_5x5':
                 matches.append(match['matchId'])
         return matches
 
@@ -180,11 +186,11 @@ class RiotService:
         return s_ids, c_ids
 
 
-    def create_match_database(self,count = 1000):
+    def create_match_database(self,summoner_name,count = 1000):
         players_id = set()
         matches_id = set()
 
-        match_id = self.get_matchlist_by_summoner_id(self.get_summoner_id('slodkii'))[0]
+        match_id = self.get_matchlist_by_summoner_id(self.get_summoner_id(summoner_name))[0]
         players = self.get_all_summoners_id_from_match(match_id)
         m_ids = []
         while len(matches_id) < count:
@@ -197,37 +203,67 @@ class RiotService:
             players =  self.get_all_summoners_id_from_match(m_ids[-1])
         return matches_id
 
+    def get_data_from_match(self, match):
+        # fetch summoners ids => later call for win rations
+        # summoner role
+        # champion id
+        # who won 0 if blue ; 1 if red
+        # structurize data into a potent model -> json or csv like
+        data=[]
+        for p,pid in zip(match['participants'],match['participantIdentities']):
+            player = Player()
+            player.summoner_id = pid['player']['summonerId']
+            player.champion_id = p['championId']
+            print(player.summoner_id)
+            winrate, total = self.get_champion_winrate(player)
+            player.winrate = winrate
+            player.total_games = total
+            player.team = p['teamId']
+            player.role = p['timeline']['role']
+            player.lane = p['timeline']['lane']
+            player.win = p['stats']['winner']
+            data.append(player)
+            print(player.summoner_id, player.champion_id, player.winrate, player.total_games, player.role,player.lane, player.team, player.win)
+        print(data)
 
 
-service = RiotService('na')
-id = service.get_summoner_id('Dyrus')
-print(id)
+    def get_champions_id_name_dict(self):
+        request = rq.get(
+            'https://global.api.pvp.net/api/lol/static-data/{region}/v{version}/champion?champData=image&api_key={api_key}'.format(
+                region = self.region,
+                version = api_version['static-data'],
+                api_key = API_KEY
+            )
+        )
+        check_response(request)
+        print(request)
+        id_name = {}
+        for champ in request.json()['data'].keys():
+            c = request.json()['data'][champ]
+            print(c['id'], c['key'])
+            id_name[c['id']] = c['key']
+        #
+        # champImage = [ChampionImage(key=key, name=id_name[key]) for key in id_name.keys()]
+        # ChampionImage.objects.bulk_create(champImage)
+        return id_name
 
-matches =  service.get_matchlist_by_summoner_id(id)
-print(matches)
 
-match = service.get_match_by_id(1858198944)
-print(match)
 
-ids = service.get_all_summoners_id_from_match(match_id=matches[0])[0]
-print(ids)
+service1 = RiotService('euw')
 
-matches_ids = service.create_match_database()
-matches = []
-with open('matchData-NA', 'r') as out:
-    for line in out:
-        matches.append(int(line))
-
-print(matches[5465])
-for i,m_id in enumerate(matches):
-    if i > 16:
-        break
-    match = service.get_match_by_id(m_id)
-    time.sleep(4.5)
-    blue_team = match['teams'][0]
-    b_won = blue_team['winner']
-    s_ids, c_ids = service.get_all_summoners_id_from_match(match = match)
-    print(b_won,s_ids, c_ids)
+keys = service1.get_champions_id_name_dict()
+print(keys)
+print(keys[99])
+# #matches_ids = service.create_match_database('Dyrus')
+# matches = []
+# with open('matchData-NA', 'r') as out:
+#     for line in out:
+#         matches.append(int(line))
+#
+# print(matches[5465])
+#
+# match = service.get_match_by_id(matches[3])
+# service.get_data_from_match(match)
 
 # match = service.get_current_game(id)
 # print(id)

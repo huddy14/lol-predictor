@@ -1,0 +1,101 @@
+<style>
+    @import url('https://fonts.googleapis.com/css?family=Baloo+Thambi');
+
+    .piotru th {
+        text-align:center;
+        font-family: 'Baloo Thambi', cursive;
+        font-size: 40px;
+
+    }
+
+    .piotru th:first-child {
+        color:red;
+    }
+
+    .piotru th:last-child {
+        color:blue;
+
+    }
+</style>
+{% extends 'base.html'%}
+
+{% block results %}
+<div class="container-fluid">
+    <div class="row-fluid">
+        <div class="span12">
+            <div class="jumbotron">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead class="piotru">
+                        <tr>
+                            <div class="team-headers">
+
+                                <th>RED TEAM</th>
+                                <th>BLUE TEAM</th>
+                            </div>
+
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td>
+                                <table class="table table-striped">
+
+                                    <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Summoner id</th>
+                                        <th>Champion id</th>
+                                        <th>Team</th>
+                                    </tr>
+                                    </thead>
+
+                                    <tbody>
+                                    {% for p in red %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ p.summoner_id }}</td>
+                                        <td>{{ p.champion_id }}</td>
+                                        <td>{{ p.team }}</td>
+                                    </tr>
+                                    {% endfor %}
+
+                                    </tbody>
+                                </table>
+                            </td>
+
+                            <td>
+                                <table class="table table-striped">
+
+                                    <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Summoner id</th>
+                                        <th>Champion id</th>
+                                        <th>Team</th>
+                                    </tr>
+                                    </thead>
+
+                                    <tbody>
+                                    {% for p in blue %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ p.summoner_id }}</td>
+                                        <td>{{ p.champion_id }}</td>
+                                        <td>{{ p.team }}</td>
+                                    </tr>
+                                    {% endfor %}
+
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        </tbody>
+
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
