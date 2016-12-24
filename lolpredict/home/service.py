@@ -1,10 +1,11 @@
 import requests as rq
 import asyncio
-import grequests
 import random
 import time
 from datetime import datetime as dt, timedelta
 import csv
+import os
+import json
 
 BASE_URL = ''
 # API_KEY = 'RGAPI-64ED5E8D-88A5-479F-88A8-F5C3656EBDBF'
@@ -42,29 +43,17 @@ platforms = {
 
 
 class Player:
-    def __init__(self, summoner_id=None, champion_id=None, team=None, winrate=0, total_games=0, win=None, lane=None,
-                 role=None):
-        self.summoner_id = summoner_id
+    def __init__(self, summoner_name=None, champion_id=None, team=None, winrate=0, total_games=0, avatar_url=None):
+        self.summoner_name = summoner_name
         self.champion_id = champion_id
         self.team = team
         self.winrate = winrate
         self.total_games = total_games
-        self.win = win
-        self.lane = lane
-        self.role = role
+        self.avatar_url = avatar_url
 
     def __str__(self):
         return
 
-
-class Match:
-    def __init__(self):
-        # blue team stats
-        self.bt_stats = []
-        # red team stats
-        self.rt_stats = []
-        # winner
-        self.winner = 0
 
 
 class ServiceException(Exception):
@@ -107,6 +96,9 @@ class RiotService:
 
     def __init__(self, region):
         self.region = region
+
+        with open(os.getcwd()+'/database/champDict.json') as dict_json:
+            self.champ_dict = json.load(dict_json)
 
     def get_current_game(self, summoner_id):
         """ gets current match for specified id and returns id as json object
@@ -248,10 +240,29 @@ class RiotService:
             players = self.get_summs_and_champs_from_match(m_ids[-1])
 
         # save matches id to file
-        with open('matchIds', 'w') as out:
+        with open(os.getcwd()+'/database/matchIds', 'w') as out:
             for id in match_ids:
                 out.write(str(id) + '\n')
         return match_ids
+
+    def get_data_from_current_match(self, current_match):
+        data = []
+        players = []
+
+        for p in current_match['participants']:
+            c_id = p['championId']
+            data.append(c_id)
+            winrate, total = self.get_champion_winrate(p['summonerId'], p['championId'])
+            time.sleep(0.3)
+            data.append(winrate)
+            data.append(total)
+            t_id = p['teamId']
+            data.append(t_id)
+            summ_name = p['summonerName']
+
+            players.append(Player(summoner_name=summ_name, champion_id=c_id, total_games=total, winrate=winrate, team=t_id, avatar_url=self.champ_dict[str(c_id)]['url']))
+        return {'data':data, 'players':players}
+
 
     def get_data_from_match(self, match):
         # table returns champId, winRate, totalGames, team (x10 fro each player) and winner team
@@ -277,7 +288,7 @@ class RiotService:
         print(data)
         return data
 
-    def get_champions_id_name_dict(self):
+    def create_champ_database(self):
         """ populates a dictionary with key: champion id and value: champion name"""
 
         request = rq.get(
@@ -294,14 +305,18 @@ class RiotService:
             c = request.json()['data'][champ]
             ids.append(c['id'])
             print(c['id'], c['key'])
-            id_name[c['id']] = c['key']
+            id_name[c['id']] = {'name': c['key'], 'url': 'http://ddragon.leagueoflegends.com/cdn/5.2.1/img/champion/'+
+                                                         c['key']+'.png'}
 
+        # creating a json file
+        with open(os.getcwd()+'/database/champDict.json', 'w') as out:
+            json.dump(id_name, out)
         return {'dict': id_name, 'ids': ids}
 
-    def create_analysis_file(self):
-        with open('matchIds', 'r') as out:
+    def create_stats_database(self, ids_path, out_path):
+        with open(os.getcwd()+'/database/'+ids_path, 'r') as out:
 
-            with open('matchData', 'w') as file:
+            with open(os.getcwd()+'/database/'+out_path, 'w') as file:
                 writer = csv.writer(file)
                 writer.writerow(create_csv_header())
                 for i, line in enumerate(out):
@@ -311,10 +326,9 @@ class RiotService:
                         data = self.get_data_from_match(match)
                         print(data)
                         writer.writerow(data)
-                    if (i > 200): break
 
-    def create_analysis_file1(self, ids):
-        with open('matchData', 'w') as file:
+    def create_mock_stats_database(self, ids):
+        with open(os.getcwd()+'/database/matchData', 'w') as file:
             writer = csv.writer(file)
             writer.writerow(create_csv_header())
             size = len(ids) - 1
@@ -339,61 +353,8 @@ def create_csv_header():
         header.append('TotalMatches' + str(i))
         header.append('Team' + str(i))
     header.append('Winner')
-    return header;
+    return header
 
 
-print(create_csv_header())
-service1 = RiotService('na')
-#service1.create_analysis_file()
 
-ids = service1.get_champions_id_name_dict()['ids']
-service1.create_analysis_file1(ids)
 
-def create_mock_data(ids):
-    size = len(ids) - 1
-
-    final = []
-    for i in range(10):
-        match = []
-        for j in range(10):
-            match.append(ids[random.randint(0, size)])
-            match.append(random.random())
-            match.append(random.randint(250))
-            if j < 5:
-                match.append(100)
-            else:
-                match.append(200)
-        match.append(random.randint(0, 1))
-        final.append(match)
-
-# print(keys)
-# print(keys[99])
-# #matches_ids = service.create_match_database('Dyrus')
-# matches = []
-# with open('matchIds', 'r') as out:
-#     for line in out:
-#         matches.append(int(line))
-#
-# print(matches[5465])
-#
-# match = service.get_match_by_id(matches[3])
-# service.get_data_from_match(match)
-
-# match = service.get_current_game(id)
-# print(id)
-# print(match)
-# player = service.create_player_list(match)
-#
-# time.sleep(1)
-#
-# el = asyncio.get_event_loop()
-# for p in player:
-#     print(p.champion_id,p.summoner_id,p.team, p.winrate, p.total_games)
-#
-# try:
-#     el.run_until_complete(service.get_winrates_for_each_player(player))
-# finally:
-#     el.close()
-#
-# for p in player:
-#     print(p.champion_id,p.summoner_id,p.team, p.winrate, p.total_games)

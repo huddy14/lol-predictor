@@ -1,98 +1,167 @@
 <style>
-    @import url('https://fonts.googleapis.com/css?family=Baloo+Thambi');
+    @import url('https://fonts.googleapis.com/css?family=Kumar+One|Molle:400i');
 
-    .piotru th {
+    .headers th {
         text-align:center;
-        font-family: 'Baloo Thambi', cursive;
+        font-family: 'Kumar One', cursive;
         font-size: 40px;
 
     }
 
-    .piotru th:first-child {
+    .headers th:first-child {
         color:red;
     }
 
-    .piotru th:last-child {
+    .headers th:last-child {
         color:blue;
 
     }
+
+    .table {
+        font-size: 14px;
+    }
+
+    .table td {
+        text-align: center;
+
+    }
+
+    .table th {
+        text-align: center;
+    }
+
+    .img-responsive {
+        margin: 0 auto;
+        width: 30%;
+        height: 30%;
+
+    }
+
+    .table-striped > tbody > tr:nth-child(2n+1) > td, .table-striped > tbody > tr:nth-child(2n+1) > th {
+        background-color: #CEFFFB;
+    }
+
+
+    .jumbotron {
+        padding: 5% 5% 5% 5%;
+        margin: 10% 5% 5% 5%;
+        background: rgb(200, 54, 54);
+        background: rgba(255, 254, 254, 0.5) !important;
+    }
+
+    .borderless td, .borderless th {
+        border: none;
+    }
+
+    .progress {
+        height:50px !important;
+        text-align: center;
+    }
+
+    .massive-font{
+        font-size: 20px !important;
+        font-family: 'Molle', italic;
+        text-align: center;
+    }
+
+    .progress {
+        padding: 15px;
+        background: rgba(0,0,0,0.8) !important;
+    }
+
+
+
 </style>
 {% extends 'base.html'%}
 
 {% block results %}
-<div class="container-fluid">
-    <div class="row-fluid">
-        <div class="span12">
-            <div class="jumbotron">
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead class="piotru">
-                        <tr>
-                            <div class="team-headers">
+<div class="span12">
+    <div class="jumbotron jumbotron-background">
+        <div class="table-responsive">
+            <table class="table borderless">
+                <thead class="headers">
+                <tr>
 
-                                <th>RED TEAM</th>
-                                <th>BLUE TEAM</th>
-                            </div>
+                    <th>RED TEAM</th>
+                    <th>BLUE TEAM</th>
 
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <td>
-                                <table class="table table-striped">
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>
+                        <table class="table table-striped">
 
-                                    <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Summoner id</th>
-                                        <th>Champion id</th>
-                                        <th>Team</th>
-                                    </tr>
-                                    </thead>
+                            <thead>
+                            <tr>
+                                <th>Champion</th>
+                                <th>Summoner</th>
+                                <th>Win rate</th>
+                                <th>Total games</th>
+                            </tr>
+                            </thead>
 
-                                    <tbody>
-                                    {% for p in red %}
-                                    <tr>
-                                        <td>{{ forloop.counter }}</td>
-                                        <td>{{ p.summoner_id }}</td>
-                                        <td>{{ p.champion_id }}</td>
-                                        <td>{{ p.team }}</td>
-                                    </tr>
-                                    {% endfor %}
+                            <tbody>
+                            {% for p in red %}
+                            <tr>
+                                <td>
+                                    <img src="{{ p.avatar_url }}" class="img-responsive">
 
-                                    </tbody>
-                                </table>
-                            </td>
+                                </td>
+                                <td>{{ p.summoner_name }}</td>
+                                <td>{{ p.winrate|stringformat:".2f" }}</td>
+                                <td>{{ p.total_games }}</td>
+                            </tr>
+                            {% endfor %}
 
-                            <td>
-                                <table class="table table-striped">
+                            </tbody>
+                        </table>
+                    </td>
 
-                                    <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Summoner id</th>
-                                        <th>Champion id</th>
-                                        <th>Team</th>
-                                    </tr>
-                                    </thead>
+                    <td>
+                        <table class="table table-striped">
 
-                                    <tbody>
-                                    {% for p in blue %}
-                                    <tr>
-                                        <td>{{ forloop.counter }}</td>
-                                        <td>{{ p.summoner_id }}</td>
-                                        <td>{{ p.champion_id }}</td>
-                                        <td>{{ p.team }}</td>
-                                    </tr>
-                                    {% endfor %}
+                            <thead>
+                            <tr>
+                                <th>Champion</th>
+                                <th>Summoner</th>
+                                <th>Win rate</th>
+                                <th>Total games</th>
+                            </tr>
+                            </thead>
 
-                                    </tbody>
-                                </table>
-                            </td>
-                        </tr>
-                        </tbody>
+                            <tbody>
+                            {% for p in blue %}
+                            <tr>
+                                <td>
+                                    <img src="{{ p.avatar_url }}" class="img-responsive">
 
-                    </table>
+                                </td>
+                                <td>{{ p.summoner_name }}</td>
+                                <td>{{ p.winrate|stringformat:".2f" }}</td>
+                                <td>{{ p.total_games }}</td>
+                            </tr>
+                            {% endfor %}
+
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                </tbody>
+
+            </table>
+        </div>
+        <div class="progress">
+            <div class="bar">
+                <div class="progress-bar progress-bar-danger" role="progressbar" style="width:{{ prediction.0 }}%">
+                    <div class="red-bar massive-font">
+                        {{ prediction.0 }}% winning chance
+                    </div>
+                </div>
+                <div class="progress-bar" role="progressbar" style="width:{{ prediction.1 }}%">
+                    <div class="blue-bar massive-font">
+                        {{ prediction.1 }}% winning chance
+                    </div>
                 </div>
             </div>
         </div>
